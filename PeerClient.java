@@ -1,35 +1,101 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.Socket;
+import java.io.*;
+import java.net.*;
+import java.util.Scanner;
 
 public class PeerClient {
     public static void main(String[] args) {
-
         try {
             System.out.println("Connecting to server...");
             Socket socket = new Socket("localhost", 5454);
             System.out.println("Connected to " + socket.getRemoteSocketAddress());
 
-            // Get user input
-            BufferedReader userInput = new BufferedReader(new InputStreamReader(System.in));
-            System.out.println("Enter the message: ");
-            String message = userInput.readLine();
-
-            // Send message to server
-            PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-            writer.println(message);
-
-            // Receive and print server's response
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            String serverResponse = in.readLine();
-            System.out.println("Server response: " + serverResponse);
+            PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+            Scanner scanner = new Scanner(System.in);
 
-            socket.close(); // Close socket when done
+            String command;
+            while (true) {
+                System.out.println("Choose an option: send_file, request_file, view_files, exit");
+                command = scanner.nextLine();
+                out.println(command);
+
+                if ("exit".equalsIgnoreCase(command)) {
+                    System.out.println("Disconnecting from server...");
+                    break;
+                } else if ("send_file".equalsIgnoreCase(command)) {
+                    String ack = in.readLine();
+                    if ("ACK".equals(ack)) {
+                        sendFile(socket);
+                        String serverResponse = in.readLine();
+                        System.out.println("Server response: " + serverResponse);
+                    }
+                } else if ("request_file".equalsIgnoreCase(command)) {
+                    System.out.println("Enter the file name to request:");
+                    String fileName = scanner.nextLine();
+                    out.println(fileName);
+                    receiveFile(socket, fileName);
+                } else if ("view_files".equalsIgnoreCase(command)) {
+                    System.out.println("Server files:");
+                    String response;
+                    while (!(response = in.readLine()).equals("")) {
+                        System.out.println(response);
+                    }
+                } else {
+                    String response = in.readLine();
+                    System.out.println("Server response: " + response);
+                }
+            }
+
+            socket.close();
+            scanner.close();
         } catch (IOException e) {
             System.err.println("Client exception: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private static void sendFile(Socket socket) throws IOException {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Enter the file path to send:");
+        String filePath = scanner.nextLine();
+
+        File file = new File(filePath);
+        if (!file.exists()) {
+            System.out.println("File not found!");
+            return;
+        }
+
+        DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+        dos.writeUTF(file.getName());
+        dos.writeLong(file.length());
+
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = fis.read(buffer)) > 0) {
+                dos.write(buffer, 0, bytesRead);
+            }
+        }
+
+        System.out.println("File " + file.getName() + " sent successfully.");
+    }
+
+    private static void receiveFile(Socket socket, String fileName) throws IOException {
+        DataInputStream dis = new DataInputStream(socket.getInputStream());
+        String serverFileName = dis.readUTF();
+        long fileSize = dis.readLong();
+
+        try (FileOutputStream fos = new FileOutputStream("client_" + serverFileName)) {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            long totalRead = 0;
+
+            while (totalRead < fileSize && (bytesRead = dis.read(buffer)) > 0) {
+                fos.write(buffer, 0, bytesRead);
+                totalRead += bytesRead;
+            }
+        }
+
+        System.out.println("File received: " + serverFileName + " (Size: " + fileSize + " bytes)");
     }
 }
