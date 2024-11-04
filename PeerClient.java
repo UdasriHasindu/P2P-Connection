@@ -31,13 +31,23 @@ public class PeerClient {
                     }
                 } else if ("request_file".equalsIgnoreCase(command)) {
                     System.out.println("Enter the file name to request:");
-                    String fileName = scanner.nextLine();
+                    String fileName = scanner.nextLine(); // Ensure the user enters the exact file name
                     out.println(fileName);
-                    receiveFile(socket, fileName);
+
+                    // Read the server's response about file's availability
+                    String response = in.readLine(); 
+                    if ("File not found".equals(response)) {
+                        System.out.println("Server response: " + response); // Inform user if file is missing
+                    } else if ("File found. Sending...".equals(response)) {
+                        // Now proceed to receive the file
+                        receiveFile(socket); // Call the method to receive the file
+                    } else {
+                        System.out.println("Unexpected response from server: " + response);
+                    }
                 } else if ("view_files".equalsIgnoreCase(command)) {
                     System.out.println("Server files:");
                     String response;
-                    while (!(response = in.readLine()).equals("")) {
+                    while (!(response = in.readLine()).isEmpty()) { // Stop at empty line
                         System.out.println(response);
                     }
                 } else {
@@ -80,7 +90,7 @@ public class PeerClient {
         System.out.println("File " + file.getName() + " sent successfully.");
     }
 
-    private static void receiveFile(Socket socket, String fileName) throws IOException {
+    private static void receiveFile(Socket socket) throws IOException {
         DataInputStream dis = new DataInputStream(socket.getInputStream());
         String serverFileName = dis.readUTF();
         long fileSize = dis.readLong();
