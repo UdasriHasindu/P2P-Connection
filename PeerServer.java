@@ -43,21 +43,21 @@ class ClientHandler implements Runnable {
         ) {
             String command;
             while ((command = in.readLine()) != null) {
-                switch (command.toLowerCase()) {
-                    case "send_file":
+                switch (command.toUpperCase()) {
+                    case "SF":  // Send File
                         out.println("ACK");
                         receiveFile(socket);
                         out.println("File received successfully");
                         break;
-                    case "request_file":
+                    case "RF":  // Request File
                         String fileName = in.readLine(); // Read the file name requested by the client
                         System.out.println("Client requested file: " + fileName);
                         sendFile(fileName, out);
                         break;
-                    case "view_files":
+                    case "VF":  // View Files
                         listFiles(out);
                         break;
-                    case "exit":
+                    case "EXIT":
                         System.out.println("Client disconnected.");
                         return;
                     default:
@@ -79,8 +79,8 @@ class ClientHandler implements Runnable {
 
     private void receiveFile(Socket socket) throws IOException {
         DataInputStream dis = new DataInputStream(socket.getInputStream());
-        String fileName = dis.readUTF(); // Read the file name
-        long fileSize = dis.readLong(); // Read the file size
+        String fileName = dis.readUTF();
+        long fileSize = dis.readLong();
 
         File file = new File(PeerServer.FILE_DIRECTORY + File.separator + fileName);
         try (FileOutputStream fos = new FileOutputStream(file)) {
@@ -99,14 +99,13 @@ class ClientHandler implements Runnable {
 
     private void sendFile(String fileName, PrintWriter out) throws IOException {
         File file = new File(PeerServer.FILE_DIRECTORY + File.separator + fileName);
-        
-        // Debugging: Check if the file exists
+
         if (!file.exists()) {
             out.println("File not found");
-            System.out.println("File not found on server: " + fileName); // Debugging statement
+            System.out.println("File not found on server: " + fileName);
             return;
         }
-        
+
         out.println("File found. Sending...");
         DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
         dos.writeUTF(file.getName());
