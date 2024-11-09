@@ -15,29 +15,37 @@ public class PeerClient {
 
             String command;
             while (true) {
-                System.out.println("Choose an option: send_file, request_file, view_files, exit");
+                System.out.println("Choose an option: SF (send file), RF (request file), VF (view files), EXIT");
                 command = scanner.nextLine();
                 out.println(command);
 
-                if ("exit".equalsIgnoreCase(command)) {
+                if ("EXIT".equalsIgnoreCase(command)) {
                     System.out.println("Disconnecting from server...");
                     break;
-                } else if ("send_file".equalsIgnoreCase(command)) {
+                } else if ("SF".equalsIgnoreCase(command)) {
                     String ack = in.readLine();
                     if ("ACK".equals(ack)) {
                         sendFile(socket);
                         String serverResponse = in.readLine();
                         System.out.println("Server response: " + serverResponse);
                     }
-                } else if ("request_file".equalsIgnoreCase(command)) {
+                } else if ("RF".equalsIgnoreCase(command)) {
                     System.out.println("Enter the file name to request:");
                     String fileName = scanner.nextLine();
                     out.println(fileName);
-                    receiveFile(socket, fileName);
-                } else if ("view_files".equalsIgnoreCase(command)) {
+
+                    String response = in.readLine();
+                    if ("File not found".equals(response)) {
+                        System.out.println("Server response: " + response);
+                    } else if ("File found. Sending...".equals(response)) {
+                        receiveFile(socket);
+                    } else {
+                        System.out.println("Unexpected response from server: " + response);
+                    }
+                } else if ("VF".equalsIgnoreCase(command)) {
                     System.out.println("Server files:");
                     String response;
-                    while (!(response = in.readLine()).equals("")) {
+                    while (!(response = in.readLine()).isEmpty()) {
                         System.out.println(response);
                     }
                 } else {
@@ -80,7 +88,7 @@ public class PeerClient {
         System.out.println("File " + file.getName() + " sent successfully.");
     }
 
-    private static void receiveFile(Socket socket, String fileName) throws IOException {
+    private static void receiveFile(Socket socket) throws IOException {
         DataInputStream dis = new DataInputStream(socket.getInputStream());
         String serverFileName = dis.readUTF();
         long fileSize = dis.readLong();

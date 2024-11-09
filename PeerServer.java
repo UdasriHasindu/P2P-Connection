@@ -7,9 +7,10 @@ public class PeerServer {
     public static final String FILE_DIRECTORY = "server_files";
 
     public static void main(String[] args) {
+        // Create directory for storing files if it doesn't exist
         File directory = new File(FILE_DIRECTORY);
         if (!directory.exists()) {
-            directory.mkdir(); // Create directory for storing files if it doesn't exist
+            directory.mkdir();
         }
 
         try (ServerSocket serverSocket = new ServerSocket(5454)) {
@@ -42,21 +43,21 @@ class ClientHandler implements Runnable {
         ) {
             String command;
             while ((command = in.readLine()) != null) {
-                switch (command.toLowerCase()) {
-                    case "send_file":
+                switch (command.toUpperCase()) {
+                    case "SF":  // Send File
                         out.println("ACK");
                         receiveFile(socket);
                         out.println("File received successfully");
                         break;
-                    case "request_file":
-                        out.println("Enter the file name to request:");
-                        String fileName = in.readLine();
+                    case "RF":  // Request File
+                        String fileName = in.readLine(); // Read the file name requested by the client
+                        System.out.println("Client requested file: " + fileName);
                         sendFile(fileName, out);
                         break;
-                    case "view_files":
+                    case "VF":  // View Files
                         listFiles(out);
                         break;
-                    case "exit":
+                    case "EXIT":
                         System.out.println("Client disconnected.");
                         return;
                     default:
@@ -87,10 +88,9 @@ class ClientHandler implements Runnable {
             int bytesRead;
             long totalRead = 0;
 
-            while ((bytesRead = dis.read(buffer)) > 0) {
+            while (totalRead < fileSize && (bytesRead = dis.read(buffer)) > 0) {
                 fos.write(buffer, 0, bytesRead);
                 totalRead += bytesRead;
-                if (totalRead >= fileSize) break;
             }
         }
 
@@ -99,8 +99,10 @@ class ClientHandler implements Runnable {
 
     private void sendFile(String fileName, PrintWriter out) throws IOException {
         File file = new File(PeerServer.FILE_DIRECTORY + File.separator + fileName);
+
         if (!file.exists()) {
-            out.println("File not found on server.");
+            out.println("File not found");
+            System.out.println("File not found on server: " + fileName);
             return;
         }
 
@@ -141,5 +143,6 @@ class ClientHandler implements Runnable {
                 out.println("- " + fileName);
             }
         }
+        out.println(""); // Send an empty line as a delimiter
     }
 }
